@@ -1,54 +1,29 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { File, PlusCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ProductsTable } from './products-table';
-import { getProducts } from '@/lib/db';
+import { GoogleButton, ScreenShotButton } from '@/components/ui/button';
+import { GoogleTable } from '@/components/ui/table-google';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { takeScreenshots } from './actions';
 
-export default async function ProductsPage({
+export default async function MainPage({
   searchParams
 }: {
-  searchParams: { q: string; offset: string };
+  searchParams: { q: string; offset: string, code: string };
 }) {
   const search = searchParams.q ?? '';
+  const code = searchParams.code ?? '';
   const offset = searchParams.offset ?? 0;
-  const { products, newOffset, totalProducts } = await getProducts(
-    search,
-    Number(offset)
-  );
 
   return (
     <Tabs defaultValue="all">
       <div className="flex items-center">
-        <TabsList>
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="active">Active</TabsTrigger>
-          <TabsTrigger value="draft">Draft</TabsTrigger>
-          <TabsTrigger value="archived" className="hidden sm:flex">
-            Archived
-          </TabsTrigger>
-        </TabsList>
         <div className="ml-auto flex items-center gap-2">
-          <Button size="sm" variant="outline" className="h-8 gap-1">
-            <File className="h-3.5 w-3.5" />
-            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-              Export
-            </span>
-          </Button>
-          <Button size="sm" className="h-8 gap-1">
-            <PlusCircle className="h-3.5 w-3.5" />
-            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-              Add Product
-            </span>
-          </Button>
+          <GoogleButton />
+          <ScreenShotButton onClick={takeScreenshots} />
+
         </div>
       </div>
-      <TabsContent value="all">
-        <ProductsTable
-          products={products}
-          offset={newOffset ?? 0}
-          totalProducts={totalProducts}
-        />
-      </TabsContent>
+        <TabsContent value="all">
+          <GoogleTable code={code} />
+        </TabsContent>
     </Tabs>
   );
 }

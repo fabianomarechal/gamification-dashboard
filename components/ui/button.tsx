@@ -1,8 +1,11 @@
-import * as React from 'react';
+'use client';
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
+import * as React from 'react';
 
 import { cn } from '@/lib/utils';
+import { getUser } from 'app/(dashboard)/actions';
+import { Circle, PlusCircle } from 'lucide-react';
 
 const buttonVariants = cva(
   'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
@@ -53,5 +56,38 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   }
 );
 Button.displayName = 'Button';
+
+export const ScreenShotButton = ({ onClick }: { onClick: Function }) => {
+  const [ loading, setLoading ] = React.useState(false);
+  
+  const handleTakeScreenshot = () => {
+    setLoading(true);
+    onClick().then(() => setLoading(false));
+  }
+return <Button size="sm" className="h-8 gap-1" onClick={() => handleTakeScreenshot()} disabled={loading}>
+    <PlusCircle className="h-3.5 w-3.5" />
+    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+      {loading ? 'Processando...' : 'Capturar badges'}
+    </span>
+  </Button>
+}
+
+export const GoogleButton = () => {
+
+  const [ user, setUser ] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    getUser().then(user => {
+      setUser(user);
+    });
+  }, []);
+
+  return <Button size="sm" variant="outline" className="h-8 gap-1" disabled={true}>
+    <Circle fill={!!user ? 'green' : 'white'} className="h-3.5 w-3.5" />
+    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+      Autorizar Google
+    </span>
+  </Button>
+}
 
 export { Button, buttonVariants };
