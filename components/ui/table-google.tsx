@@ -1,6 +1,6 @@
 'use client';
 import { cn } from '@/lib/utils';
-import { getGoogleDriveFiles } from 'app/(dashboard)/actions';
+import { getGoogleDriveFiles } from 'app/dashboard/actions';
 import { useEffect, useState } from 'react';
 
 export const GoogleTable = ({

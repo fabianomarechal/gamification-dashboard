@@ -4,7 +4,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import * as React from 'react';
 
 import { cn } from '@/lib/utils';
-import { getUser } from 'app/(dashboard)/actions';
+import { getUser } from 'app/dashboard/actions';
 import { Circle, PlusCircle } from 'lucide-react';
 
 const buttonVariants = cva(
@@ -74,16 +74,18 @@ return <Button size="sm" className="h-8 gap-1" onClick={() => handleTakeScreensh
 
 export const GoogleButton = () => {
 
-  const [ user, setUser ] = React.useState<any>(null);
+  const [ user, setUser ] = React.useState<any>({});
 
   React.useEffect(() => {
-    getUser().then(user => {
-      setUser(user);
+    getUser().then(data => {
+      setUser(data.user);
     });
   }, []);
 
+  console.log('user', user);
+
   return <Button size="sm" variant="outline" className="h-8 gap-1" disabled={true}>
-    <Circle fill={!!user ? 'green' : 'white'} className="h-3.5 w-3.5" />
+    <Circle fill={!!user?.email ? 'green' : 'white'} className="h-3.5 w-3.5" />
     <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
       Autorizar Google
     </span>

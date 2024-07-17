@@ -1,6 +1,4 @@
 import { Button } from '@/components/ui/button';
-import { auth, signOut } from '@/lib/auth';
-import Image from 'next/image';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,6 +7,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import { auth, signOut } from '@/lib/auth';
+import Image from 'next/image';
 import Link from 'next/link';
 
 export async function User() {
@@ -51,7 +51,7 @@ export async function User() {
           </DropdownMenuItem>
         ) : (
           <DropdownMenuItem>
-            <Link href="/login">Sign In</Link>
+            <Link href="/">Sign In</Link>
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>
