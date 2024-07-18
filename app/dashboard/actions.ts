@@ -82,7 +82,7 @@ export async function uploadToGoogleDriveFolder(files: string[]) {
 export const takeScreenshots = async () => {
 	console.log('Taking screenshots');
   const browser = await launch({ 
-		args: chromium.args,
+		args: [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
 		defaultViewport: chromium.defaultViewport,
 		executablePath: await chromium.executablePath(
       `https://github.com/Sparticuz/chromium/releases/download/v126.0.0/chromium-v126.0.0-pack.tar`
@@ -90,22 +90,22 @@ export const takeScreenshots = async () => {
     headless: chromium.headless,
     ignoreHTTPSErrors: true,
 	 });
-	 console.log('okkk')
   const page = await browser.newPage();
-console.log(0)
+
   // Navigate the page to a URL
   await page.goto('https://app.powerbi.com/view?r=eyJrIjoiNzRhMWRjNTgtYWFlZS00ZTViLTkyMjEtZGFmYTE5Zjg0YjI5IiwidCI6IjNkZDBiZGZlLTNkYmUtNGM5MC1iYmIxLWU4ZjljNjQzZjY0YyJ9');
-console.log(-1)
+
 	page.on('dialog', async (dialog: any) => {
 		await dialog.accept();
 	})
 
-	console.log(1)
+  // Set screen size
+  await page.setViewport({width: 1920, height: 1080});
+
 	//Ir para a página de login
 	await page.waitForNetworkIdle();
-	console.log(2)
   await page.click('.imageBackground');
-console.log(3)
+
 
 	// Preencher senha e login
 	await page.waitForNetworkIdle();
