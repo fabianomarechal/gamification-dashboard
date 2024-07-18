@@ -3,6 +3,9 @@ import { GoogleTable } from '@/components/ui/table-google';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { takeScreenshots } from './actions';
 
+export const maxDuration = 300;
+
+
 export default async function MainPage({
   searchParams
 }: {
