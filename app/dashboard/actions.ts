@@ -1,9 +1,11 @@
 'use server';
 import { auth } from '@/lib/auth';
 import { oAuthGoogle } from '@/lib/google';
+import chromium from '@sparticuz/chromium-min';
 import { createReadStream, readdirSync, unlink } from 'fs';
 import { google } from 'googleapis';
 import { launch } from 'puppeteer';
+
 const drive = google.drive({ version: 'v3', auth: oAuthGoogle });
 
 export async function getUser() {
@@ -79,7 +81,14 @@ export async function uploadToGoogleDriveFolder(files: string[]) {
 
 export const takeScreenshots = async () => {
 	console.log('Taking screenshots');
-  const browser = await launch({ headless: true });
+  const browser = await launch({ 
+		args: chromium.args,
+		executablePath: await chromium.executablePath(
+      `https://github.com/Sparticuz/chromium/releases/download/v116.0.0/chromium-v116.0.0-pack.tar`
+    ),
+    headless: chromium.headless,
+    ignoreHTTPSErrors: true,
+	 });
   const page = await browser.newPage();
 
   // Navigate the page to a URL
