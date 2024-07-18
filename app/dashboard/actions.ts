@@ -7,6 +7,7 @@ import { google } from 'googleapis';
 import { launch } from 'puppeteer-core';
 
 const drive = google.drive({ version: 'v3', auth: oAuthGoogle });
+export const maxDuration = 300;
 
 export async function getUser() {
   const session = await auth();
