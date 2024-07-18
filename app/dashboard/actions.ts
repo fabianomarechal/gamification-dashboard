@@ -4,7 +4,7 @@ import { oAuthGoogle } from '@/lib/google';
 import chromium from '@sparticuz/chromium-min';
 import { createReadStream, readdirSync, unlink } from 'fs';
 import { google } from 'googleapis';
-import { launch } from 'puppeteer';
+import { launch } from 'puppeteer-core';
 
 const drive = google.drive({ version: 'v3', auth: oAuthGoogle });
 
@@ -83,28 +83,29 @@ export const takeScreenshots = async () => {
 	console.log('Taking screenshots');
   const browser = await launch({ 
 		args: chromium.args,
+		defaultViewport: chromium.defaultViewport,
 		executablePath: await chromium.executablePath(
-      `https://github.com/Sparticuz/chromium/releases/download/v116.0.0/chromium-v116.0.0-pack.tar`
+      `https://github.com/Sparticuz/chromium/releases/download/v126.0.0/chromium-v126.0.0-pack.tar`
     ),
     headless: chromium.headless,
     ignoreHTTPSErrors: true,
 	 });
+	 console.log('okkk')
   const page = await browser.newPage();
-
+console.log(0)
   // Navigate the page to a URL
   await page.goto('https://app.powerbi.com/view?r=eyJrIjoiNzRhMWRjNTgtYWFlZS00ZTViLTkyMjEtZGFmYTE5Zjg0YjI5IiwidCI6IjNkZDBiZGZlLTNkYmUtNGM5MC1iYmIxLWU4ZjljNjQzZjY0YyJ9');
-
+console.log(-1)
 	page.on('dialog', async (dialog: any) => {
 		await dialog.accept();
 	})
 
-  // Set screen size
-  await page.setViewport({width: 1920, height: 1080});
-
+	console.log(1)
 	//Ir para a página de login
 	await page.waitForNetworkIdle();
+	console.log(2)
   await page.click('.imageBackground');
-
+console.log(3)
 
 	// Preencher senha e login
 	await page.waitForNetworkIdle();
