@@ -104,6 +104,7 @@ export const takeScreenshots = async () => {
 
 	//Ir para a página de login
 	await page.waitForNetworkIdle();
+	await page.waitForSelector('.imageBackground');
   await page.click('.imageBackground');
 
 
