@@ -4,7 +4,7 @@ import { oAuthGoogle } from '@/lib/google';
 import chromium from '@sparticuz/chromium-min';
 import { createReadStream, readdirSync, unlink } from 'fs';
 import { google } from 'googleapis';
-import { launch } from 'puppeteer-core';
+import { defaultArgs, launch } from 'puppeteer-core';
 
 const drive = google.drive({ version: 'v3', auth: oAuthGoogle });
 
@@ -17,25 +17,27 @@ export async function getUser() {
 export async function getGoogleDriveFiles() {
 	const session = await auth();
 
-	if(!session?.accessToken) return [];
-
 	oAuthGoogle.setCredentials({
 		access_token: session?.accessToken
 	});
 	
-
-	// search for folder: Banners de Evolução e Reconhecimento
-  const files = await drive.files.list({
-		driveId: '0ACrIqDScuJJ9Uk9PVA',
-		pageSize: 10,
-		q: "mimeType='application/vnd.google-apps.folder'",
-		fields: 'files(id, name)',
-		corpora: 'drive',
-		includeItemsFromAllDrives: true,
-		supportsAllDrives: true,
-	});
-
-  return files.data.files ?? [];
+	try	{
+		// search for folder: Banners de Evolução e Reconhecimento
+		const files = await drive.files.list({
+			driveId: '0ACrIqDScuJJ9Uk9PVA',
+			pageSize: 10,
+			q: "mimeType='application/vnd.google-apps.folder'",
+			fields: 'files(id, name)',
+			corpora: 'drive',
+			includeItemsFromAllDrives: true,
+			supportsAllDrives: true,
+		});
+		return files.data.files ?? [];
+	} catch (error) {
+		console.error('Error getting files from Google Drive', error);
+	}
+	
+	return [];
 }
 
 export async function uploadToGoogleDriveFolder(files: string[]) {
@@ -80,11 +82,12 @@ export async function uploadToGoogleDriveFolder(files: string[]) {
 }
 
 export const takeScreenshots = async () => {
+	try {
 	console.log('Taking screenshots');
   const browser = await launch({ 
-		args: chromium.args, //[...chromium.args, '--hide-scrollbars', '--disable-web-security'],
+		args: process.env.IS_LOCAL ? defaultArgs() : chromium.args, //[...chromium.args, '--hide-scrollbars', '--disable-web-security'],
 		// defaultViewport: chromium.defaultViewport,
-		executablePath: await chromium.executablePath(
+		executablePath: process.env.IS_LOCAL ? "/tmp/localChromium/chromium/mac_arm-1329859/chrome-mac/Chromium.app/Contents/MacOS/Chromium" : await chromium.executablePath(
       `https://github.com/Sparticuz/chromium/releases/download/v126.0.0/chromium-v126.0.0-pack.tar`
     ),
     headless: chromium.headless,
@@ -158,10 +161,13 @@ export const takeScreenshots = async () => {
 	} while(++contador < total);
 	console.log('Screenshots tiradas');
 	await browser.close();
+	} catch (error) {
+		console.error('Error taking screenshots', error);
+	}
 
-	// Upload to Google Drive
 	const files = readdirSync('screenshots');
 	try {
+		// Upload to Google Drive
 		// await uploadToGoogleDriveFolder(files);
 	} catch (error) {
 		console.error('Error uploading to Google Drive', error);
