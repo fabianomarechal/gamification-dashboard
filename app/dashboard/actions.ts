@@ -1,10 +1,10 @@
 'use server';
-import { auth } from '@/lib/auth';
+import { auth, signOut } from '@/lib/auth';
 import { oAuthGoogle } from '@/lib/google';
 import chromium from '@sparticuz/chromium-min';
-import { createReadStream, readdirSync, unlink } from 'fs';
 import { google } from 'googleapis';
 import { defaultArgs, launch } from 'puppeteer-core';
+import { Readable } from 'stream';
 
 const drive = google.drive({ version: 'v3', auth: oAuthGoogle });
 
@@ -40,14 +40,13 @@ export async function getGoogleDriveFiles() {
 	return [];
 }
 
-export async function uploadToGoogleDriveFolder(files: string[]) {
+export async function uploadToGoogleDrive(filename: string, fileStream: Readable) {
 	const session = await auth();
 	oAuthGoogle.setCredentials({
 		access_token: session?.accessToken
 	});
 
 	const folderId = '1KM43NCF_Ig1mp-BumIpvNjh8PavotIcA';
-	const pathOfImages = 'screenshots';
 
 	const newFolder = await drive.files.create({
 		requestBody: {
@@ -63,21 +62,19 @@ export async function uploadToGoogleDriveFolder(files: string[]) {
 	// Upload all files to the new folder
 	
 	if(newFolder.data.id) {
-		for (const file of files) {
-			await drive.files.create({
-				requestBody: {
-					driveId: '0ACrIqDScuJJ9Uk9PVA',
-					name: file,
-					mimeType: 'image/png',
-					parents: [newFolder.data.id]
-				},
-				media: {
-					mimeType: 'image/png',
-					body: createReadStream(`${pathOfImages}/${file}`)
-				},
-				supportsAllDrives: true,
-			});
-		}
+		await drive.files.create({
+			requestBody: {
+				driveId: '0ACrIqDScuJJ9Uk9PVA',
+				name: filename,
+				mimeType: 'image/png',
+				parents: [newFolder.data.id]
+			},
+			media: {
+				mimeType: 'image/png',
+				body: fileStream
+			},
+			supportsAllDrives: true,
+		});
 	}
 }
 
@@ -148,8 +145,8 @@ export const takeScreenshots = async () => {
 		const header = await page.$('.textRun');
 		await header?.scrollIntoView();
 		const date = new Date().toLocaleDateString('pt-BR').split('/').reverse().join('-');
-		await page.screenshot({
-			path:  `screenshots/${nome}-${date}.png`,
+		const filename = `${nome}-${date}.png`
+		const file = await page.screenshot({
 			type: 'png',
 			clip: {
 				x: 660,
@@ -158,22 +155,19 @@ export const takeScreenshots = async () => {
 				height: 610
 			}
 		})
+		const stream = Readable.from(file);
+
+		await uploadToGoogleDrive(filename, stream);
 	} while(++contador < total);
 	console.log('Screenshots tiradas');
 	await browser.close();
-	} catch (error) {
+	} catch (error: any) {
 		console.error('Error taking screenshots', error);
-	}
-
-	const files = readdirSync('screenshots');
-	try {
-		// Upload to Google Drive
-		// await uploadToGoogleDriveFolder(files);
-	} catch (error) {
-		console.error('Error uploading to Google Drive', error);
-	}
-	finally{
-		files.forEach(file => unlink(`screenshots/${file}`, () => {}));
+		if(error.code === 401) {
+			await signOut({
+				redirectTo: '/'
+			});
+		}
 	}
 
 }
