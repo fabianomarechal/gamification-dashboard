@@ -40,7 +40,7 @@ export async function getGoogleDriveFiles() {
 	return [];
 }
 
-export async function uploadToGoogleDrive(filename: string, fileStream: Readable) {
+export async function uploadToGoogleDrive({folder, fileStream, filename}: {folder: string, filename: string, fileStream: Readable}) {
 	const session = await auth();
 	oAuthGoogle.setCredentials({
 		access_token: session?.accessToken
@@ -51,7 +51,7 @@ export async function uploadToGoogleDrive(filename: string, fileStream: Readable
 	const newFolder = await drive.files.create({
 		requestBody: {
 			driveId: '0ACrIqDScuJJ9Uk9PVA',
-			name: new Date().toLocaleDateString('pt-BR').split('/').reverse().join('-') + ' ' + new Date().toLocaleTimeString('pt-BR'), 
+			name: folder, 
 			mimeType: 'application/vnd.google-apps.folder',
 			parents: [folderId]
 		},
@@ -133,7 +133,8 @@ export const takeScreenshots = async () => {
 	const linksSelector = await page.$$('::-p-xpath(//visual-modern/div/div/div[2]/div/div[2]/div/div[1]/div/div/div/div/div[2])')
 	const nomesSelector = await page.$$('::-p-xpath(//visual-modern/div/div/div[2]/div/div[2]/div/div[1]/div/div/div/div/span)');
 	const total = linksSelector.length;
-
+	const folder = new Date().toLocaleDateString('pt-BR').split('/').reverse().join('-') + ' ' + new Date().toLocaleTimeString('pt-BR')
+	
 	do {
 		await linksSelector[contador].click();
 		await page.waitForNetworkIdle();
@@ -155,9 +156,9 @@ export const takeScreenshots = async () => {
 				height: 610
 			}
 		})
-		const stream = Readable.from(file);
+		const fileStream = Readable.from(file);
 
-		await uploadToGoogleDrive(filename, stream);
+		await uploadToGoogleDrive({ folder, filename, fileStream});
 	} while(++contador < total);
 	console.log('Screenshots tiradas');
 	await browser.close();
