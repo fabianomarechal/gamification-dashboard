@@ -40,42 +40,21 @@ export async function getGoogleDriveFiles() {
 	return [];
 }
 
-export async function uploadToGoogleDrive({folder, fileStream, filename}: {folder: string, filename: string, fileStream: Readable}) {
-	const session = await auth();
-	oAuthGoogle.setCredentials({
-		access_token: session?.accessToken
-	});
-
-	const folderId = '1KM43NCF_Ig1mp-BumIpvNjh8PavotIcA';
-
-	const newFolder = await drive.files.create({
+export async function uploadToGoogleDrive({folderId, fileStream, filename}: {folderId: string, filename: string, fileStream: Readable}) {
+	
+	await drive.files.create({
 		requestBody: {
 			driveId: '0ACrIqDScuJJ9Uk9PVA',
-			name: folder, 
-			mimeType: 'application/vnd.google-apps.folder',
+			name: filename,
+			mimeType: 'image/png',
 			parents: [folderId]
 		},
+		media: {
+			mimeType: 'image/png',
+			body: fileStream
+		},
 		supportsAllDrives: true,
-		fields: 'id'
 	});
-
-	// Upload all files to the new folder
-	
-	if(newFolder.data.id) {
-		await drive.files.create({
-			requestBody: {
-				driveId: '0ACrIqDScuJJ9Uk9PVA',
-				name: filename,
-				mimeType: 'image/png',
-				parents: [newFolder.data.id]
-			},
-			media: {
-				mimeType: 'image/png',
-				body: fileStream
-			},
-			supportsAllDrives: true,
-		});
-	}
 }
 
 export const takeScreenshots = async () => {
@@ -159,7 +138,25 @@ export const takeScreenshots = async () => {
 		})
 		const fileStream = Readable.from(file);
 
-		await uploadToGoogleDrive({ folder, filename, fileStream});
+		const session = await auth();
+	oAuthGoogle.setCredentials({
+		access_token: session?.accessToken
+	});
+
+	const folderId = '1KM43NCF_Ig1mp-BumIpvNjh8PavotIcA';
+
+	const newFolder = await drive.files.create({
+		requestBody: {
+			driveId: '0ACrIqDScuJJ9Uk9PVA',
+			name: folder, 
+			mimeType: 'application/vnd.google-apps.folder',
+			parents: [folderId]
+		},
+		supportsAllDrives: true,
+		fields: 'id'
+	});
+
+	await uploadToGoogleDrive({ folderId: newFolder.data.id!, filename, fileStream});
 	} while(++contador < total);
 	console.log('Screenshots tiradas');
 	await browser.close();
