@@ -114,6 +114,21 @@ export const takeScreenshots = async () => {
 	const nomesSelector = await page.$$('::-p-xpath(//visual-modern/div/div/div[2]/div/div[2]/div/div[1]/div/div/div/div/span)');
 	const total = linksSelector.length;
 	const folder = new Date().toLocaleDateString('pt-BR').split('/').reverse().join('-') + ' ' + new Date().toLocaleTimeString('pt-BR')
+	const session = await auth();
+	oAuthGoogle.setCredentials({
+		access_token: session?.accessToken
+	});
+	const folderId = '1KM43NCF_Ig1mp-BumIpvNjh8PavotIcA';
+	const newFolder = await drive.files.create({
+		requestBody: {
+			driveId: '0ACrIqDScuJJ9Uk9PVA',
+			name: folder, 
+			mimeType: 'application/vnd.google-apps.folder',
+			parents: [folderId]
+		},
+		supportsAllDrives: true,
+		fields: 'id'
+	});
 	
 	do {
 		await linksSelector[contador].click();
@@ -137,24 +152,6 @@ export const takeScreenshots = async () => {
 			}
 		})
 		const fileStream = Readable.from(file);
-
-		const session = await auth();
-	oAuthGoogle.setCredentials({
-		access_token: session?.accessToken
-	});
-
-	const folderId = '1KM43NCF_Ig1mp-BumIpvNjh8PavotIcA';
-
-	const newFolder = await drive.files.create({
-		requestBody: {
-			driveId: '0ACrIqDScuJJ9Uk9PVA',
-			name: folder, 
-			mimeType: 'application/vnd.google-apps.folder',
-			parents: [folderId]
-		},
-		supportsAllDrives: true,
-		fields: 'id'
-	});
 
 	await uploadToGoogleDrive({ folderId: newFolder.data.id!, filename, fileStream});
 	} while(++contador < total);
