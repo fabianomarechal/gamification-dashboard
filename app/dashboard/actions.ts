@@ -3,10 +3,147 @@ import { auth, signOut } from '@/lib/auth';
 import { oAuthGoogle } from '@/lib/google';
 import chromium from '@sparticuz/chromium-min';
 import { google } from 'googleapis';
-import { defaultArgs, launch } from 'puppeteer-core';
+import { Browser, defaultArgs, ElementHandle, launch, Page } from 'puppeteer-core';
 import { Readable } from 'stream';
 
 const drive = google.drive({ version: 'v3', auth: oAuthGoogle });
+
+class Screenshot {
+	browser: Browser | null;
+	page: Page | null;
+	total: number = 0;
+	folderId?: string|null;
+
+	linksSelector?: ElementHandle<Element>[];
+	nomesSelector?: ElementHandle<Element>[];
+
+	constructor() {
+		this.browser = null;
+		this.page = null;
+	}
+
+	async init() {
+		const browser = await launch({ 
+			args: process.env.IS_LOCAL ? defaultArgs() : chromium.args, //[...chromium.args, '--hide-scrollbars', '--disable-web-security'],
+			// defaultViewport: chromium.defaultViewport,
+			executablePath: process.env.IS_LOCAL ? "/opt/homebrew/bin/Chromium" : await chromium.executablePath(
+				`https://github.com/Sparticuz/chromium/releases/download/v126.0.0/chromium-v126.0.0-pack.tar`
+			),
+			headless: chromium.headless,
+			// ignoreHTTPSErrors: true,
+		 });
+		const page = await browser.newPage();
+	}
+
+	async goToPage() {
+		if(!this.page) {
+			return;
+		};
+		// Navigate the page to a URL
+		await this.page.goto('https://app.powerbi.com/view?r=eyJrIjoiNzRhMWRjNTgtYWFlZS00ZTViLTkyMjEtZGFmYTE5Zjg0YjI5IiwidCI6IjNkZDBiZGZlLTNkYmUtNGM5MC1iYmIxLWU4ZjljNjQzZjY0YyJ9');
+
+		this.page.on('dialog', async (dialog: any) => {
+			await dialog.accept();
+		})
+	
+		// Set screen size
+		await this.page.setViewport({width: 1920, height: 1080});
+	
+		//Ir para a página de login
+		await this.page.waitForNetworkIdle();
+		await this.page.waitForSelector('.imageBackground');
+		await this.page.click('.imageBackground');
+	
+	
+		// Preencher senha e login
+		await this.page.waitForNetworkIdle();
+		const inputSelector = '.date-slicer-control:nth-child(1) > .date-slicer-input';
+		await this.page.locator(inputSelector).fill('2406')
+		await this.page.waitForSelector(inputSelector).then((selector: any) => selector.press('Enter'));
+	
+		// clicar em IR
+		let buttons = await this.page.$$('.ui-role-button-fill', );
+		while (buttons.length <= 2) {
+			await this.page.waitForNetworkIdle();
+			buttons = await this.page.$$('.ui-role-button-fill');
+			if(buttons.length > 2) {
+				break;
+			}
+			await buttons[1].click();
+		}
+	
+		buttons = await this.page.$$('.ui-role-button-fill', );
+		await buttons[3].click();
+	
+		await this.page.waitForNetworkIdle();
+	
+		this.linksSelector = await this.page.$$('::-p-xpath(//visual-modern/div/div/div[2]/div/div[2]/div/div[1]/div/div/div/div/div[2])')
+		this.nomesSelector = await this.page.$$('::-p-xpath(//visual-modern/div/div/div[2]/div/div[2]/div/div[1]/div/div/div/div/span)');
+		this.total = this.linksSelector.length;
+	}
+
+	async createFolder() {
+		const folder = new Date().toLocaleDateString('pt-BR').split('/').reverse().join('-') + ' ' + new Date().toLocaleTimeString('pt-BR')
+		const session = await auth();
+		oAuthGoogle.setCredentials({
+			access_token: session?.accessToken
+		});
+		const folderId = '1KM43NCF_Ig1mp-BumIpvNjh8PavotIcA';
+		const newFolder = await drive.files.create({
+			requestBody: {
+				driveId: '0ACrIqDScuJJ9Uk9PVA',
+				name: folder, 
+				mimeType: 'application/vnd.google-apps.folder',
+				parents: [folderId]
+			},
+			supportsAllDrives: true,
+			fields: 'id'
+		});
+		this.folderId = newFolder.data.id;
+	}
+
+	async takeScreenshot(contador: number) {
+		if(!this.page || !this.linksSelector || !this.nomesSelector || !this.browser) return;
+		await this.linksSelector[screenshot.total].click();
+		await this.page.waitForNetworkIdle();
+
+		const nome = await (await (this.nomesSelector[contador]).getProperty('innerText')).jsonValue()
+
+		console.log(`Tirando screenshot de ${nome}`);
+
+		const header = await this.page.$('.textRun');
+		await header?.scrollIntoView();
+		const date = new Date().toLocaleDateString('pt-BR').split('/').reverse().join('-');
+		const filename = `${nome}-${date}.png`
+		const file = await this.page.screenshot({
+			type: 'png',
+			clip: {
+				x: 660,
+				y: 125,
+				width: 610,
+				height: 610
+			}
+		})
+		const fileStream = Readable.from(file);
+
+		await this.copyToFolder(filename, fileStream);
+
+		if(this.total === contador) {
+			await this.close();
+		}
+	}
+
+	async copyToFolder(filename: string, fileStream: Readable) {
+		await uploadToGoogleDrive({ folderId: this.folderId!, filename, fileStream});
+	}
+
+	async close() {
+		await this.browser?.close();
+	}
+
+}
+
+const screenshot = new Screenshot();
 
 export async function getUser() {
   const session = await auth();
@@ -57,106 +194,24 @@ export async function uploadToGoogleDrive({folderId, fileStream, filename}: {fol
 	});
 }
 
-export const takeScreenshots = async () => {
-	try {
-	console.log('Taking screenshots');
-  const browser = await launch({ 
-		args: process.env.IS_LOCAL ? defaultArgs() : chromium.args, //[...chromium.args, '--hide-scrollbars', '--disable-web-security'],
-		// defaultViewport: chromium.defaultViewport,
-		executablePath: process.env.IS_LOCAL ? "/tmp/localChromium/chromium/mac_arm-1329859/chrome-mac/Chromium.app/Contents/MacOS/Chromium" : await chromium.executablePath(
-      `https://github.com/Sparticuz/chromium/releases/download/v126.0.0/chromium-v126.0.0-pack.tar`
-    ),
-    headless: chromium.headless,
-    // ignoreHTTPSErrors: true,
-	 });
-  const page = await browser.newPage();
-
-  // Navigate the page to a URL
-  await page.goto('https://app.powerbi.com/view?r=eyJrIjoiNzRhMWRjNTgtYWFlZS00ZTViLTkyMjEtZGFmYTE5Zjg0YjI5IiwidCI6IjNkZDBiZGZlLTNkYmUtNGM5MC1iYmIxLWU4ZjljNjQzZjY0YyJ9');
-
-	page.on('dialog', async (dialog: any) => {
-		await dialog.accept();
-	})
-
-  // Set screen size
-  await page.setViewport({width: 1920, height: 1080});
-
-	//Ir para a página de login
-	await page.waitForNetworkIdle();
-	await page.waitForSelector('.imageBackground');
-  await page.click('.imageBackground');
-
-
-	// Preencher senha e login
-	await page.waitForNetworkIdle();
-	const inputSelector = '.date-slicer-control:nth-child(1) > .date-slicer-input';
-	await page.locator(inputSelector).fill('2406')
-	await page.waitForSelector(inputSelector).then((selector: any) => selector.press('Enter'));
-
-	// clicar em IR
-	let buttons = await page.$$('.ui-role-button-fill', );
-	while (buttons.length <= 2) {
-		await page.waitForNetworkIdle();
-		buttons = await page.$$('.ui-role-button-fill');
-		if(buttons.length > 2) {
-			break;
+export const handleScreenshots = async (contador: number): Promise<{status: string, total: number, current: number}> => {
+	if(!(contador<0)) {
+		if(!screenshot.browser && !screenshot.page){
+			console.log('Iniciando browser');
+			await screenshot.init();
 		}
-		await buttons[1].click();
+		console.log('Iniciando página');
+		await screenshot.goToPage();
+
+		if(screenshot.total===0) return {total: screenshot.total, status: 'Erro ao tirar screenshots', current: contador};
+		await screenshot.createFolder();
+		console.log('Pasta criada', screenshot.folderId);
+		return {total: screenshot.total, status: 'Capturando badges', current: 0};
 	}
 
-	buttons = await page.$$('.ui-role-button-fill', );
-	await buttons[3].click();
-
-	await page.waitForNetworkIdle();
-
-	let contador = 0;
-	const linksSelector = await page.$$('::-p-xpath(//visual-modern/div/div/div[2]/div/div[2]/div/div[1]/div/div/div/div/div[2])')
-	const nomesSelector = await page.$$('::-p-xpath(//visual-modern/div/div/div[2]/div/div[2]/div/div[1]/div/div/div/div/span)');
-	const total = linksSelector.length;
-	const folder = new Date().toLocaleDateString('pt-BR').split('/').reverse().join('-') + ' ' + new Date().toLocaleTimeString('pt-BR')
-	const session = await auth();
-	oAuthGoogle.setCredentials({
-		access_token: session?.accessToken
-	});
-	const folderId = '1KM43NCF_Ig1mp-BumIpvNjh8PavotIcA';
-	const newFolder = await drive.files.create({
-		requestBody: {
-			driveId: '0ACrIqDScuJJ9Uk9PVA',
-			name: folder, 
-			mimeType: 'application/vnd.google-apps.folder',
-			parents: [folderId]
-		},
-		supportsAllDrives: true,
-		fields: 'id'
-	});
-	
-	do {
-		await linksSelector[contador].click();
-		await page.waitForNetworkIdle();
-
-		const nome = await (await (nomesSelector[contador]).getProperty('innerText')).jsonValue()
-
-		console.log(`Tirando screenshot de ${nome}`);
-
-		const header = await page.$('.textRun');
-		await header?.scrollIntoView();
-		const date = new Date().toLocaleDateString('pt-BR').split('/').reverse().join('-');
-		const filename = `${nome}-${date}.png`
-		const file = await page.screenshot({
-			type: 'png',
-			clip: {
-				x: 660,
-				y: 125,
-				width: 610,
-				height: 610
-			}
-		})
-		const fileStream = Readable.from(file);
-
-	await uploadToGoogleDrive({ folderId: newFolder.data.id!, filename, fileStream});
-	} while(++contador < total);
-	console.log('Screenshots tiradas');
-	await browser.close();
+	try {
+		await screenshot.takeScreenshot(contador);
+		return {total: screenshot.total, status: 'Screenshots tiradas', current: ++contador};
 	} catch (error: any) {
 		console.error('Error taking screenshots', error);
 		if(error.code === 401) {
@@ -164,6 +219,7 @@ export const takeScreenshots = async () => {
 				redirectTo: '/'
 			});
 		}
+		return {total: screenshot.total, status: 'Erro ao tirar screenshots', current: contador};
 	}
 
 }

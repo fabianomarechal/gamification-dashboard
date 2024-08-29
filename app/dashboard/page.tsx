@@ -1,7 +1,5 @@
-import { GoogleButton, ScreenShotButton } from '@/components/ui/button';
-import { GoogleTable } from '@/components/ui/table-google';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { takeScreenshots } from './actions';
+import { CaptureBadges } from '@/components/capture-badges';
+import { Tabs } from '@/components/ui/tabs';
 
 export const maxDuration = 300;
 
@@ -17,16 +15,12 @@ export default async function MainPage({
 
   return (
     <Tabs defaultValue="all">
-      <div className="flex items-center">
-        <div className="ml-auto flex items-center gap-2">
-          <GoogleButton />
-          <ScreenShotButton onClick={takeScreenshots} />
-
-        </div>
+      <div className="w-ful">
+        <CaptureBadges />     
       </div>
-        <TabsContent value="all">
+        {/* <TabsContent value="all">
           <GoogleTable code={code} />
-        </TabsContent>
+        </TabsContent> */}
     </Tabs>
   );
 }

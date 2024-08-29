@@ -6,6 +6,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { getUser } from 'app/dashboard/actions';
 import { Circle, PlusCircle } from 'lucide-react';
+import { useFormStatus } from 'react-dom';
 
 const buttonVariants = cva(
   'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
@@ -57,17 +58,12 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 Button.displayName = 'Button';
 
-export const ScreenShotButton = ({ onClick }: { onClick: Function }) => {
-  const [ loading, setLoading ] = React.useState(false);
-  
-  const handleTakeScreenshot = () => {
-    setLoading(true);
-    onClick().then(() => setLoading(false));
-  }
-return <Button size="sm" className="h-8 gap-1" onClick={() => handleTakeScreenshot()} disabled={loading}>
+export const ScreenShotButton = () => {
+  const { pending: isLoading } = useFormStatus();
+return <Button type='button' size="sm" className="h-8 gap-1" disabled={isLoading}>
     <PlusCircle className="h-3.5 w-3.5" />
     <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-      {loading ? 'Processando...' : 'Capturar badges'}
+      {isLoading ? 'Processando...' : 'Capturar badges'}
     </span>
   </Button>
 }
