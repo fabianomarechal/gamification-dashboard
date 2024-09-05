@@ -1,34 +1,49 @@
 'use client';
 import { handleScreenshots } from 'app/dashboard/actions';
-import { useEffect, useState } from 'react';
+import { StatusEnum } from 'app/dashboard/enums/status.enum';
+import { useCallback, useEffect, useState } from 'react';
 import { GoogleButton, ScreenShotButton } from '../ui/button';
 import ProgressBar from '../ui/progress-bar';
 
+interface CaptureBadgesProps {
+  current: number,
+  total: number,
+  folderId?: string,
+  status: string,
+  message?: string
+} 
+
 export function CaptureBadges () {
-  const [ counter, setCounter ] = useState(-1);
-  const [state, setState] = useState({ current: 0, total: 0, status: '' });
+  const [state, setState] = useState<CaptureBadgesProps>({
+    current: 0,
+    total: 0,
+    status: StatusEnum.NOT_STARTED,
+    folderId: undefined
+  });
 
+  const updateState = useCallback(async () => {
+    if(state.total === 0 || state.current >= state.total) return;
 
-  useEffect(() => {
-    console.log('state', state);
-    setCounter(state.current);
-  }, [state.current, state.total]);
-
-  useEffect(() => {
-    console.log('counter', counter);
-    if(counter !== -1) {
-      handleScreenshots(counter);
-    }
-  }, [counter]);
-
-  const handleStart = () => {
-    handleScreenshots(counter).then(data => {
-      console.log('data1', data);
+    try {
+      const data = await handleScreenshots(state.current, state.total, state.folderId)
       setState(data);
-    }).catch(error => {
-      console.error('error', error);
-    });
-  }
+    } catch(error) {
+      console.error('Error updating state:', error);
+    };
+  }, [state]);
+
+  useEffect(() => {
+    updateState();
+  }, [updateState]);
+
+  const handleStart = useCallback(async () => {
+    try {
+      const data = await handleScreenshots(-1, state.total, state.folderId);
+      setState(data);
+    } catch (error) {
+      console.error('Error starting process:', error);
+    }
+  }, [state.total, state.folderId]);
 
   return (
     <form onClick={handleStart}>
@@ -39,7 +54,7 @@ export function CaptureBadges () {
         </div>
       </div>
       <div className="flex gap-4 mt-16">
-        <ProgressBar status={'Copiando dados'} total={state.total} current={state.current} />
+        <ProgressBar status={state.status} total={state.total} current={state.current} message={state.message} />
       </div>
     </form>
   );
